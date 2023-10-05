@@ -42,37 +42,37 @@ test: test_g test_fast
 	$(HELPER) ./test_g$(BINEXT)
 	$(HELPER) ./test_fast$(BINEXT)
 
-test_g: http_parser_g.o test_g.o
-	$(CC) $(CFLAGS_DEBUG) $(LDFLAGS) http_parser_g.o test_g.o -o $@
+test_g: url_parser_g.o test_g.o
+	$(CC) $(CFLAGS_DEBUG) $(LDFLAGS) url_parser_g.o test_g.o -o $@
 
-test_g.o: test.c http_parser.h Makefile
+test_g.o: test.c url_parser.h Makefile
 	$(CC) $(CPPFLAGS_DEBUG) $(CFLAGS_DEBUG) -c test.c -o $@
 
-http_parser_g.o: http_parser.c http_parser.h Makefile
-	$(CC) $(CPPFLAGS_DEBUG) $(CFLAGS_DEBUG) -c http_parser.c -o $@
+url_parser_g.o: url_parser.c url_parser.h Makefile
+	$(CC) $(CPPFLAGS_DEBUG) $(CFLAGS_DEBUG) -c url_parser.c -o $@
 
-test_fast: http_parser.o test.o http_parser.h
-	$(CC) $(CFLAGS_FAST) $(LDFLAGS) http_parser.o test.o -o $@
+test_fast: url_parser.o test.o url_parser.h
+	$(CC) $(CFLAGS_FAST) $(LDFLAGS) url_parser.o test.o -o $@
 
-test.o: test.c http_parser.h Makefile
+test.o: test.c url_parser.h Makefile
 	$(CC) $(CPPFLAGS_FAST) $(CFLAGS_FAST) -c test.c -o $@
 
-http_parser.o: http_parser.c http_parser.h Makefile
-	$(CC) $(CPPFLAGS_FAST) $(CFLAGS_FAST) -c http_parser.c
+url_parser.o: url_parser.c url_parser.h Makefile
+	$(CC) $(CPPFLAGS_FAST) $(CFLAGS_FAST) -c url_parser.c
 
 test-valgrind: test_g
 	valgrind ./test_g
 
-url_parser: http_parser.o contrib/url_parser.c
+url_parser: url_parser.o url_parser_demo.c
 	$(CC) $(CPPFLAGS_FAST) $(CFLAGS_FAST) $^ -o $@
 
-url_parser_g: http_parser_g.o contrib/url_parser.c
+url_parser_g: url_parser_g.o url_parser_demo.c
 	$(CC) $(CPPFLAGS_DEBUG) $(CFLAGS_DEBUG) $^ -o $@
 
 clean:
 	rm -f *.o *.a tags test test_fast test_g \
 		*.exe *.exe.so
 
-contrib/url_parser.c:	http_parser.h
+url_parser_demo.c: url_parser.h
 
 .PHONY: clean test test-valgrind
