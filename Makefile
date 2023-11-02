@@ -21,6 +21,13 @@
 HELPER ?=
 BINEXT ?=
 BUILDDIR ?= $(CURDIR)
+SOLIBNAME = liburl_parser
+SOMAJOR = 1
+SOMINOR = 0
+SOREV   = 0
+SOEXT ?= so
+SONAME ?= $(SOLIBNAME).$(SOEXT).$(SOMAJOR).$(SOMINOR)
+LIBNAME ?= $(SOLIBNAME).$(SOEXT).$(SOMAJOR).$(SOMINOR).$(SOREV)
 
 CC?=gcc
 AR?=ar
@@ -38,6 +45,16 @@ CPPFLAGS_BENCH = $(CPPFLAGS_FAST)
 CFLAGS += -Wall -Wextra -Werror
 CFLAGS_DEBUG = $(CFLAGS) -O0 -g $(CFLAGS_DEBUG_EXTRA)
 CFLAGS_FAST = $(CFLAGS) -O3 $(CFLAGS_FAST_EXTRA)
+CFLAGS_LIB = $(CFLAGS_FAST) -fPIC
+
+LDFLAGS_LIB = $(LDFLAGS) -shared
+
+INSTALL ?= install
+PREFIX ?= /usr/local
+LIBDIR = $(PREFIX)/lib
+INCLUDEDIR = $(PREFIX)/include
+
+all: library
 
 test: $(BUILDDIR)/test_g $(BUILDDIR)/test_fast
 	$(HELPER) $(BUILDDIR)/test_g$(BINEXT)
@@ -64,11 +81,37 @@ $(BUILDDIR)/url_parser.o: url_parser.c url_parser.h Makefile
 test-valgrind: test_g
 	valgrind ./test_g
 
-$(BUILDDIR)/url_parser: $(BINDIR)/url_parser.o url_parser_demo.c
+$(BUILDDIR)/liburl_parser.o: url_parser.c url_parser.h Makefile
+	$(CC) $(CPPFLAGS_FAST) $(CFLAGS_LIB) -c url_parser.c -o $@
+
+library: $(BUILDDIR)/$(LIBNAME)
+
+$(BUILDDIR)/$(LIBNAME): $(BUILDDIR)/liburl_parser.o
+	$(CC) $(LDFLAGS_LIB) -o $@ $<
+
+$(BUILDDIR)/url_parser: $(BUILDDIR)/url_parser.o url_parser_demo.c
 	$(CC) $(CPPFLAGS_FAST) $(CFLAGS_FAST) $^ -o $@
 
 $(BUILDDIR)/url_parser_g: $(BUILDDIR)/url_parser_g.o url_parser_demo.c
 	$(CC) $(CPPFLAGS_DEBUG) $(CFLAGS_DEBUG) $^ -o $@
+
+install: library
+	$(INSTALL) -D url_parser.h $(DESTDIR)$(INCLUDEDIR)/url_parser.h
+	$(INSTALL) -D $(BUILDDIR)/$(LIBNAME) $(DESTDIR)$(LIBDIR)/$(LIBNAME)
+	ln -sf $(LIBNAME) $(DESTDIR)$(LIBDIR)/$(SONAME)
+	ln -sf $(LIBNAME) $(DESTDIR)$(LIBDIR)/$(SOLIBNAME).$(SOEXT)
+
+install-strip: library
+	$(INSTALL) -D url_parser.h $(DESTDIR)$(INCLUDEDIR)/url_parser.h
+	$(INSTALL) -D -s $(BUILDDIR)/$(LIBNAME) $(DESTDIR)$(LIBDIR)/$(LIBNAME)
+	ln -sf $(LIBNAME) $(DESTDIR)$(LIBDIR)/$(SONAME)
+	ln -sf $(LIBNAME) $(DESTDIR)$(LIBDIR)/$(SOLIBNAME).$(SOEXT)
+
+uninstall:
+	rm $(DESTDIR)$(INCLUDEDIR)/url_parser.h
+	rm $(DESTDIR)$(LIBDIR)/$(SOLIBNAME).$(SOEXT)
+	rm $(DESTDIR)$(LIBDIR)/$(SONAME)
+	rm $(DESTDIR)$(LIBDIR)/$(LIBNAME)
 
 clean:
 	rm -f $(BUILDDIR)/*.o $(BUILDDIR)/*.a $(BUILDDIR)/*.so \
@@ -77,4 +120,4 @@ clean:
 
 url_parser_demo.c: url_parser.h
 
-.PHONY: clean test test-valgrind
+.PHONY: all library install install-strip uninstall clean test test-valgrind
