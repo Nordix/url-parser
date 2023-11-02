@@ -20,6 +20,7 @@
 
 HELPER ?=
 BINEXT ?=
+BUILDDIR ?= $(CURDIR)
 
 CC?=gcc
 AR?=ar
@@ -38,40 +39,41 @@ CFLAGS += -Wall -Wextra -Werror
 CFLAGS_DEBUG = $(CFLAGS) -O0 -g $(CFLAGS_DEBUG_EXTRA)
 CFLAGS_FAST = $(CFLAGS) -O3 $(CFLAGS_FAST_EXTRA)
 
-test: test_g test_fast
-	$(HELPER) ./test_g$(BINEXT)
-	$(HELPER) ./test_fast$(BINEXT)
+test: $(BUILDDIR)/test_g $(BUILDDIR)/test_fast
+	$(HELPER) $(BUILDDIR)/test_g$(BINEXT)
+	$(HELPER) $(BUILDDIR)/test_fast$(BINEXT)
 
-test_g: url_parser_g.o test_g.o
-	$(CC) $(CFLAGS_DEBUG) $(LDFLAGS) url_parser_g.o test_g.o -o $@
+$(BUILDDIR)/test_g: $(BUILDDIR)/url_parser_g.o $(BUILDDIR)/test_g.o
+	$(CC) $(CFLAGS_DEBUG) $(LDFLAGS) $(BUILDDIR)/url_parser_g.o $(BUILDDIR)/test_g.o -o $@
 
-test_g.o: test.c url_parser.h Makefile
+$(BUILDDIR)/test_g.o: test.c url_parser.h Makefile
 	$(CC) $(CPPFLAGS_DEBUG) $(CFLAGS_DEBUG) -c test.c -o $@
 
-url_parser_g.o: url_parser.c url_parser.h Makefile
+$(BUILDDIR)/url_parser_g.o: url_parser.c url_parser.h Makefile
 	$(CC) $(CPPFLAGS_DEBUG) $(CFLAGS_DEBUG) -c url_parser.c -o $@
 
-test_fast: url_parser.o test.o url_parser.h
-	$(CC) $(CFLAGS_FAST) $(LDFLAGS) url_parser.o test.o -o $@
+$(BUILDDIR)/test_fast: $(BUILDDIR)/url_parser.o $(BUILDDIR)/test.o url_parser.h
+	$(CC) $(CFLAGS_FAST) $(LDFLAGS) $(BUILDDIR)/url_parser.o $(BUILDDIR)/test.o -o $@
 
-test.o: test.c url_parser.h Makefile
+$(BUILDDIR)/test.o: test.c url_parser.h Makefile
 	$(CC) $(CPPFLAGS_FAST) $(CFLAGS_FAST) -c test.c -o $@
 
-url_parser.o: url_parser.c url_parser.h Makefile
-	$(CC) $(CPPFLAGS_FAST) $(CFLAGS_FAST) -c url_parser.c
+$(BUILDDIR)/url_parser.o: url_parser.c url_parser.h Makefile
+	$(CC) $(CPPFLAGS_FAST) $(CFLAGS_FAST) -c url_parser.c -o $@
 
 test-valgrind: test_g
 	valgrind ./test_g
 
-url_parser: url_parser.o url_parser_demo.c
+$(BUILDDIR)/url_parser: $(BINDIR)/url_parser.o url_parser_demo.c
 	$(CC) $(CPPFLAGS_FAST) $(CFLAGS_FAST) $^ -o $@
 
-url_parser_g: url_parser_g.o url_parser_demo.c
+$(BUILDDIR)/url_parser_g: $(BUILDDIR)/url_parser_g.o url_parser_demo.c
 	$(CC) $(CPPFLAGS_DEBUG) $(CFLAGS_DEBUG) $^ -o $@
 
 clean:
-	rm -f *.o *.a tags test test_fast test_g \
-		*.exe *.exe.so
+	rm -f $(BUILDDIR)/*.o $(BUILDDIR)/*.a $(BUILDDIR)/*.so \
+		$(BUILDDIR)/test_fast $(BUILDDIR)/test_g \
+		$(BUILDDIR)/url_parser $(BUILDDIR)/url_parser_g
 
 url_parser_demo.c: url_parser.h
 
