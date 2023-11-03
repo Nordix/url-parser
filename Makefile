@@ -18,8 +18,6 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-HELPER ?=
-BINEXT ?=
 BUILDDIR ?= $(CURDIR)
 SOLIBNAME = liburl_parser
 SOMAJOR = 1
@@ -28,9 +26,6 @@ SOREV   = 0
 SOEXT ?= so
 SONAME ?= $(SOLIBNAME).$(SOEXT).$(SOMAJOR).$(SOMINOR)
 LIBNAME ?= $(SOLIBNAME).$(SOEXT).$(SOMAJOR).$(SOMINOR).$(SOREV)
-
-CC?=gcc
-AR?=ar
 
 CPPFLAGS ?=
 LDFLAGS ?=
@@ -57,8 +52,8 @@ INCLUDEDIR = $(PREFIX)/include
 all: library
 
 test: $(BUILDDIR)/test_g $(BUILDDIR)/test_fast
-	$(HELPER) $(BUILDDIR)/test_g$(BINEXT)
-	$(HELPER) $(BUILDDIR)/test_fast$(BINEXT)
+	$(BUILDDIR)/test_g
+	$(BUILDDIR)/test_fast
 
 $(BUILDDIR)/test_g: $(BUILDDIR)/url_parser_g.o $(BUILDDIR)/test_g.o
 	$(CC) $(CFLAGS_DEBUG) $(LDFLAGS) $(BUILDDIR)/url_parser_g.o $(BUILDDIR)/test_g.o -o $@
