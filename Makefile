@@ -19,13 +19,13 @@
 # IN THE SOFTWARE.
 
 BUILDDIR ?= $(CURDIR)
-SOLIBNAME = liburl_parser
+LIBNAME = liburl_parser
 SOMAJOR = 1
 SOMINOR = 0
 SOREV   = 0
 SOEXT ?= so
-SONAME ?= $(SOLIBNAME).$(SOEXT).$(SOMAJOR).$(SOMINOR)
-LIBNAME ?= $(SOLIBNAME).$(SOEXT).$(SOMAJOR).$(SOMINOR).$(SOREV)
+SONAME ?= $(LIBNAME).$(SOEXT).$(SOMAJOR).$(SOMINOR)
+SOLIBNAME ?= $(LIBNAME).$(SOEXT).$(SOMAJOR).$(SOMINOR).$(SOREV)
 
 CPPFLAGS += -I.
 CPPFLAGS_DEBUG = $(CPPFLAGS) -DHTTP_PARSER_STRICT=1
@@ -76,14 +76,14 @@ test-valgrind: test_g
 $(BUILDDIR)/liburl_parser.o: url_parser.c url_parser.h Makefile
 	$(CC) $(CPPFLAGS_FAST) $(CFLAGS_LIB) -c url_parser.c -o $@
 
-library: $(BUILDDIR)/$(LIBNAME)
+library: $(BUILDDIR)/$(SOLIBNAME)
 
-$(BUILDDIR)/$(LIBNAME): $(BUILDDIR)/liburl_parser.o
+$(BUILDDIR)/$(SOLIBNAME): $(BUILDDIR)/liburl_parser.o
 	$(CC) $(LDFLAGS_LIB) -o $@ $<
 
-package: $(BUILDDIR)/liburl_parser.a
+package: $(BUILDDIR)/$(LIBNAME).a
 
-$(BUILDDIR)/liburl_parser.a: $(BUILDDIR)/url_parser.o
+$(BUILDDIR)/$(LIBNAME).a: $(BUILDDIR)/url_parser.o
 	$(AR) rcs $@ $<
 
 $(BUILDDIR)/url_parser: $(BUILDDIR)/url_parser.o url_parser_demo.c
@@ -94,24 +94,24 @@ $(BUILDDIR)/url_parser_g: $(BUILDDIR)/url_parser_g.o url_parser_demo.c
 
 install: library package
 	$(INSTALL) -D url_parser.h $(DESTDIR)$(INCLUDEDIR)/url_parser.h
-	$(INSTALL) -D $(BUILDDIR)/liburl_parser.a $(DESTDIR)$(LIBDIR)/liburl_parser.a
-	$(INSTALL) -D $(BUILDDIR)/$(LIBNAME) $(DESTDIR)$(LIBDIR)/$(LIBNAME)
-	ln -sf $(LIBNAME) $(DESTDIR)$(LIBDIR)/$(SONAME)
-	ln -sf $(LIBNAME) $(DESTDIR)$(LIBDIR)/$(SOLIBNAME).$(SOEXT)
+	$(INSTALL) -D $(BUILDDIR)/$(LIBNAME).a $(DESTDIR)$(LIBDIR)/$(LIBNAME).a
+	$(INSTALL) -D $(BUILDDIR)/$(SOLIBNAME) $(DESTDIR)$(LIBDIR)/$(SOLIBNAME)
+	ln -sf $(SOLIBNAME) $(DESTDIR)$(LIBDIR)/$(SONAME)
+	ln -sf $(SOLIBNAME) $(DESTDIR)$(LIBDIR)/$(LIBNAME).$(SOEXT)
 
 install-strip: library package
 	$(INSTALL) -D url_parser.h $(DESTDIR)$(INCLUDEDIR)/url_parser.h
-	$(INSTALL) -D -s $(BUILDDIR)/liburl_parser.a $(DESTDIR)$(LIBDIR)/liburl_parser.a
-	$(INSTALL) -D -s $(BUILDDIR)/$(LIBNAME) $(DESTDIR)$(LIBDIR)/$(LIBNAME)
-	ln -sf $(LIBNAME) $(DESTDIR)$(LIBDIR)/$(SONAME)
-	ln -sf $(LIBNAME) $(DESTDIR)$(LIBDIR)/$(SOLIBNAME).$(SOEXT)
+	$(INSTALL) -D -s $(BUILDDIR)/$(LIBNAME).a $(DESTDIR)$(LIBDIR)/$(LIBNAME).a
+	$(INSTALL) -D -s $(BUILDDIR)/$(SOLIBNAME) $(DESTDIR)$(LIBDIR)/$(SOLIBNAME)
+	ln -sf $(SOLIBNAME) $(DESTDIR)$(LIBDIR)/$(SONAME)
+	ln -sf $(SOLIBNAME) $(DESTDIR)$(LIBDIR)/$(LIBNAME).$(SOEXT)
 
 uninstall:
 	rm $(DESTDIR)$(INCLUDEDIR)/url_parser.h
-	rm $(DESTDIR)$(LIBDIR)/$(SOLIBNAME).$(SOEXT)
+	rm $(DESTDIR)$(LIBDIR)/$(LIBNAME).$(SOEXT)
 	rm $(DESTDIR)$(LIBDIR)/$(SONAME)
-	rm $(DESTDIR)$(LIBDIR)/$(LIBNAME)
-	rm $(DESTDIR)$(LIBDIR)/liburl_parser.a
+	rm $(DESTDIR)$(LIBDIR)/$(SOLIBNAME)
+	rm $(DESTDIR)$(LIBDIR)/$(LIBNAME).a
 
 clean:
 	rm -f $(BUILDDIR)/*.o $(BUILDDIR)/*.a $(BUILDDIR)/*.so \
