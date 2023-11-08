@@ -18,14 +18,14 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-HELPER ?=
-BINEXT ?=
-
-CC?=gcc
-AR?=ar
-
-CPPFLAGS ?=
-LDFLAGS ?=
+BUILDDIR ?= $(CURDIR)
+LIBNAME = liburl_parser
+SOMAJOR = 1
+SOMINOR = 0
+SOREV   = 0
+SOEXT ?= so
+SONAME ?= $(LIBNAME).$(SOEXT).$(SOMAJOR).$(SOMINOR)
+SOLIBNAME ?= $(LIBNAME).$(SOEXT).$(SOMAJOR).$(SOMINOR).$(SOREV)
 
 CPPFLAGS += -I.
 CPPFLAGS_DEBUG = $(CPPFLAGS) -DHTTP_PARSER_STRICT=1
@@ -37,42 +37,87 @@ CPPFLAGS_BENCH = $(CPPFLAGS_FAST)
 CFLAGS += -Wall -Wextra -Werror
 CFLAGS_DEBUG = $(CFLAGS) -O0 -g $(CFLAGS_DEBUG_EXTRA)
 CFLAGS_FAST = $(CFLAGS) -O3 $(CFLAGS_FAST_EXTRA)
+CFLAGS_LIB = $(CFLAGS_FAST) -fPIC
 
-test: test_g test_fast
-	$(HELPER) ./test_g$(BINEXT)
-	$(HELPER) ./test_fast$(BINEXT)
+LDFLAGS_LIB = $(LDFLAGS) -shared -Wl,-soname,$(SONAME)
 
-test_g: url_parser_g.o test_g.o
-	$(CC) $(CFLAGS_DEBUG) $(LDFLAGS) url_parser_g.o test_g.o -o $@
+INSTALL ?= install
+PREFIX ?= /usr/local
+LIBDIR = $(PREFIX)/lib
+INCLUDEDIR = $(PREFIX)/include
 
-test_g.o: test.c url_parser.h Makefile
+all: library
+
+test: $(BUILDDIR)/test_g $(BUILDDIR)/test_fast
+	$(BUILDDIR)/test_g
+	$(BUILDDIR)/test_fast
+
+$(BUILDDIR)/test_g: $(BUILDDIR)/url_parser_g.o $(BUILDDIR)/test_g.o
+	$(CC) $(CFLAGS_DEBUG) $(LDFLAGS) $(BUILDDIR)/url_parser_g.o $(BUILDDIR)/test_g.o -o $@
+
+$(BUILDDIR)/test_g.o: test.c url_parser.h Makefile
 	$(CC) $(CPPFLAGS_DEBUG) $(CFLAGS_DEBUG) -c test.c -o $@
 
-url_parser_g.o: url_parser.c url_parser.h Makefile
+$(BUILDDIR)/url_parser_g.o: url_parser.c url_parser.h Makefile
 	$(CC) $(CPPFLAGS_DEBUG) $(CFLAGS_DEBUG) -c url_parser.c -o $@
 
-test_fast: url_parser.o test.o url_parser.h
-	$(CC) $(CFLAGS_FAST) $(LDFLAGS) url_parser.o test.o -o $@
+$(BUILDDIR)/test_fast: $(BUILDDIR)/url_parser.o $(BUILDDIR)/test.o url_parser.h
+	$(CC) $(CFLAGS_FAST) $(LDFLAGS) $(BUILDDIR)/url_parser.o $(BUILDDIR)/test.o -o $@
 
-test.o: test.c url_parser.h Makefile
+$(BUILDDIR)/test.o: test.c url_parser.h Makefile
 	$(CC) $(CPPFLAGS_FAST) $(CFLAGS_FAST) -c test.c -o $@
 
-url_parser.o: url_parser.c url_parser.h Makefile
-	$(CC) $(CPPFLAGS_FAST) $(CFLAGS_FAST) -c url_parser.c
+$(BUILDDIR)/url_parser.o: url_parser.c url_parser.h Makefile
+	$(CC) $(CPPFLAGS_FAST) $(CFLAGS_FAST) -c url_parser.c -o $@
 
 test-valgrind: test_g
 	valgrind ./test_g
 
-url_parser: url_parser.o url_parser_demo.c
+$(BUILDDIR)/liburl_parser.o: url_parser.c url_parser.h Makefile
+	$(CC) $(CPPFLAGS_FAST) $(CFLAGS_LIB) -c url_parser.c -o $@
+
+library: $(BUILDDIR)/$(SOLIBNAME)
+
+$(BUILDDIR)/$(SOLIBNAME): $(BUILDDIR)/liburl_parser.o
+	$(CC) $(LDFLAGS_LIB) -o $@ $<
+
+package: $(BUILDDIR)/$(LIBNAME).a
+
+$(BUILDDIR)/$(LIBNAME).a: $(BUILDDIR)/url_parser.o
+	$(AR) rcs $@ $<
+
+$(BUILDDIR)/url_parser: $(BUILDDIR)/url_parser.o url_parser_demo.c
 	$(CC) $(CPPFLAGS_FAST) $(CFLAGS_FAST) $^ -o $@
 
-url_parser_g: url_parser_g.o url_parser_demo.c
+$(BUILDDIR)/url_parser_g: $(BUILDDIR)/url_parser_g.o url_parser_demo.c
 	$(CC) $(CPPFLAGS_DEBUG) $(CFLAGS_DEBUG) $^ -o $@
 
+install: library package
+	$(INSTALL) -D url_parser.h $(DESTDIR)$(INCLUDEDIR)/url_parser.h
+	$(INSTALL) -D $(BUILDDIR)/$(LIBNAME).a $(DESTDIR)$(LIBDIR)/$(LIBNAME).a
+	$(INSTALL) -D $(BUILDDIR)/$(SOLIBNAME) $(DESTDIR)$(LIBDIR)/$(SOLIBNAME)
+	ln -sf $(SOLIBNAME) $(DESTDIR)$(LIBDIR)/$(SONAME)
+	ln -sf $(SOLIBNAME) $(DESTDIR)$(LIBDIR)/$(LIBNAME).$(SOEXT)
+
+install-strip: library package
+	$(INSTALL) -D url_parser.h $(DESTDIR)$(INCLUDEDIR)/url_parser.h
+	$(INSTALL) -D -s $(BUILDDIR)/$(LIBNAME).a $(DESTDIR)$(LIBDIR)/$(LIBNAME).a
+	$(INSTALL) -D -s $(BUILDDIR)/$(SOLIBNAME) $(DESTDIR)$(LIBDIR)/$(SOLIBNAME)
+	ln -sf $(SOLIBNAME) $(DESTDIR)$(LIBDIR)/$(SONAME)
+	ln -sf $(SOLIBNAME) $(DESTDIR)$(LIBDIR)/$(LIBNAME).$(SOEXT)
+
+uninstall:
+	rm $(DESTDIR)$(INCLUDEDIR)/url_parser.h
+	rm $(DESTDIR)$(LIBDIR)/$(LIBNAME).$(SOEXT)
+	rm $(DESTDIR)$(LIBDIR)/$(SONAME)
+	rm $(DESTDIR)$(LIBDIR)/$(SOLIBNAME)
+	rm $(DESTDIR)$(LIBDIR)/$(LIBNAME).a
+
 clean:
-	rm -f *.o *.a tags test test_fast test_g \
-		*.exe *.exe.so
+	rm -f $(BUILDDIR)/*.o $(BUILDDIR)/*.a $(BUILDDIR)/*.so \
+		$(BUILDDIR)/test_fast $(BUILDDIR)/test_g \
+		$(BUILDDIR)/url_parser $(BUILDDIR)/url_parser_g
 
 url_parser_demo.c: url_parser.h
 
-.PHONY: clean test test-valgrind
+.PHONY: all library package install install-strip uninstall clean test test-valgrind
